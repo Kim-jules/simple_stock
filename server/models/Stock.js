@@ -2,23 +2,25 @@ const mongoose = require("mongoose");
 
 const stockSchema = new mongoose.Schema(
   {
-    user_id: {
+    product: {
       type: mongoose.Types.ObjectId,
-      ref: "User",
-    },
-    product_id: [
-      {
-        type: mongoose.Types.ObjectId,
-        ref: "Product",
-      },
-    ],
-    location: {
-      type: String,
+      ref: "Product",
       required: true,
+    },
+    location: {
+      type: mongoose.Types.ObjectId,
+      ref: "Location",
+      required: true,
+    },
+    quantity: {
+      type: Number,
+      default: 0,
     },
   },
   { timestamps: true }
 );
+
+stockSchema.index({ product: 1, location: 1 }, { unique: true });
 
 const Stock = mongoose.model("Stock", stockSchema);
 

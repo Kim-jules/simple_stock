@@ -1,22 +1,32 @@
 const Product = require("../models/Product");
 
 const insertProduct = async (req, res) => {
-  const { product_name, quantity, unit_price } = req.body;
+  const { product_name, sku, description, unit_price } = req.body;
 
   try {
-    if (!product_name || !quantity || !unit_price) {
+    if (!product_name || !sku || description || !unit_price) {
       return res
         .status(400)
         .json({ message: "Full Product information required." });
     }
-    const newProduct = new Product({
-      product_name,
-      quantity,
-      unit_price,
-    });
 
-    await newProduct.save();
-    res.status(200).json({ message: "Product saved successfully." });
+    const existingSku = await Product.find({ sku: sku });
+
+    if (existingSku) {
+      return res
+        .status(403)
+        .json({ message: "The product sku already exists." });
+    } else {
+      const newProduct = new Product({
+        product_name,
+        sku,
+        description,
+        unit_price,
+      });
+
+      await newProduct.save();
+      res.status(201).json({ message: "Product saved successfully." });
+    }
   } catch (error) {
     console.error("Product creation error: ", error);
     res.status(500).json({ message: "Failed to add product." });

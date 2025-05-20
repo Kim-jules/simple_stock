@@ -35,64 +35,69 @@ const createStock = async (req, res) => {
   }
 };
 
-// const getAllProducts = async (req, res) => {
-//   try {
-//     const allProducts = await Product.find();
-//     res
-//       .status(200)
-//       .json({ message: "These are all the products.", products: allProducts });
-//   } catch (error) {
-//     console.error("Failed to retrieve", error);
-//     res.status(500).json({ message: "Failed to retrieve the products" });
-//   }
-// };
+const getAllStocks = async (req, res) => {
+  try {
+    const allStocks = await Stock.find();
+    res
+      .status(200)
+      .json({ message: "These are all the stocks.", stocks: allStocks });
+  } catch (error) {
+    console.error("Failed to retrieve", error);
+    res.status(500).json({ message: "Failed to retrieve the stocks" });
+  }
+};
 
-// const getProductById = async (req, res) => {
-//   const { id } = req.params;
+const getStockById = async (req, res) => {
+  const { id } = req.params;
 
-//   try {
-//     const product = await Product.findById({ _id: id });
-//     if (!product) {
-//       console.log("Product not found");
-//       return res.status(404).json({ message: "Product not found." });
-//     }
-//     res
-//       .status(200)
-//       .json({ message: "Product saved successfully", data: product });
-//   } catch (error) {
-//     console.error("Failed to retrieve product.", error);
-//     res.status(500).json({ message: "Failed to retrieve product." });
-//   }
-// };
+  try {
+    const stock = await Stock.findById({ _id: id });
+    if (!stock) {
+      console.log("stock not found");
+      return res.status(404).json({ message: "stock not found." });
+    }
+    res.status(200).json({ message: "stock saved successfully", data: stock });
+  } catch (error) {
+    console.error("Failed to retrieve stock.", error);
+    res.status(500).json({ message: "Failed to retrieve stock." });
+  }
+};
 
-// const updateProduct = async (req, res) => {
-//   const { id } = req.params;
-//   const { product_name, quantity, unit_price } = req.body;
+const updateStockById = async (req, res) => {
+  const { id } = req.params;
+  const { product_name, location } = req.body;
 
-//   try {
-//     const existingProduct = await Product.findById({ _id: id });
-//     if (!existingProduct) {
-//       console.log("Product not found");
-//       return res.status(404).json({ message: "Product not found." });
-//     }
-//     const updatedProduct = await Product.findByIdAndUpdate(
-//       { _id: id },
-//       {
-//         product_name: product_name,
-//         quantity: quantity,
-//         unit_price: unit_price,
-//       },
-//       { new: true }
-//     );
-//     res.status(200).json({
-//       message: "Product updated successfully.",
-//       new_product: updatedProduct,
-//     });
-//   } catch (error) {
-//     console.error("Internal server error", error);
-//     res.status(500).json({ message: "Failed to update." });
-//   }
-// };
+  try {
+    const existingProduct = await Product.findOne({
+      product_name: product_name,
+    });
+    if (!existingProduct) {
+      console.log("Product not found");
+      return res.status(404).json({ message: "Product not found." });
+    }
+
+    const user_id = (await req.session.user) ? req.session.user.userId : null;
+    if (!user_id) {
+      return res.status(401).json({ message: "User not authenticated." });
+    }
+    const updatedStock = await Stock.findByIdAndUpdate(
+      { _id: id },
+      {
+        user_id: user_id,
+        product_id: [existingProduct._id],
+        location: location,
+      },
+      { new: true }
+    );
+    res.status(200).json({
+      message: "Stock updated successfully.",
+      new_stock: updatedStock,
+    });
+  } catch (error) {
+    console.error("Internal server error", error);
+    res.status(500).json({ message: "Failed to update." });
+  }
+};
 
 // const deleteProductById = async (req, res) => {
 //   const { id } = req.params;
@@ -113,8 +118,8 @@ const createStock = async (req, res) => {
 
 module.exports = {
   createStock,
-  //   getAllProducts,
-  //   getProductById,
-  //   updateProduct,
+  getAllStocks,
+  getStockById,
+  updateStockById,
   //   deleteProductById,
 };

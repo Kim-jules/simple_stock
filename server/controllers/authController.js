@@ -1,8 +1,9 @@
 const User = require("../models/User");
-const bcrypt = require("bcrypt");
+const bcrypt = require("bcryptjs");
 
 const registerUser = async (req, res) => {
-  const { username, email, password } = req.body;
+  const { username, email, role, password } = req.body;
+  console.log(req.body);
   try {
     const existingEmail = await User.findOne({ email });
 
@@ -16,13 +17,19 @@ const registerUser = async (req, res) => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const newUser = new User({ username, email, password: hashedPassword });
+
+    const newUser = new User({
+      username: username,
+      email: email,
+      role: role || "user",
+      password: hashedPassword,
+    });
     await newUser.save();
 
-    res.status(201).json({ message: "User created successfully" });
+    return res.status(201).json({ message: "User created successfully" });
   } catch (err) {
     console.error("Error occured.", err);
-    res.status(500).json({ message: "Registration failed." });
+    return res.status(500).json({ message: "Registration failed." });
   }
 };
 
@@ -50,11 +57,12 @@ const loginUser = async (req, res) => {
       userId: existingUser._id,
       username: existingUser.username,
       email: existingUser.email,
+      role: existingUser.role,
     };
 
     res.status(200).json({ message: "Logged in successfully" });
   } catch (error) {
-    console.error("Error occured.", err);
+    console.error("Error occured.", error);
     res.status(500).json({ message: "Internal Server ." });
   }
 };

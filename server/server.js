@@ -7,15 +7,20 @@ const MongoStore = require("connect-mongo");
 // Routes
 const authRoutes = require("./routes/authRoutes");
 const productRoutes = require("./routes/ProductRoutes");
-const stockRoutes = require("./routes/StockRoutes");
+// const stockRoutes = require("./routes/StockRoutes");
 
 dotenv.config();
 require("./config/db").connectToDb();
 const PORT = process.env.PORT || 5000;
 
 const app = express();
-app.use(cors());
 app.use(express.json());
+app.use(
+  cors({
+    origin: "http://localhost:5173",
+    credentials: true,
+  })
+);
 app.use(express.urlencoded({ extended: true }));
 
 app.use(
@@ -35,12 +40,16 @@ app.use(
 );
 
 // Application routes
-app.use("/auth", authRoutes);
-app.use("/product", productRoutes);
-app.use("/stock", stockRoutes);
+app.use("/api/auth", authRoutes);
+app.use("/api/product", productRoutes);
+// app.use("/api/stock", stockRoutes);
 
 app.listen(PORT, () => {
-  console.log("====================================");
+  console.log(
+    "================================================================="
+  );
   console.log(`Yeah! Server is running on this URL: http://localhost:${PORT}/`);
-  console.log("====================================");
+  console.log(
+    "================================================================="
+  );
 });

@@ -7,7 +7,9 @@ const MongoStore = require("connect-mongo");
 // Routes
 const authRoutes = require("./routes/authRoutes");
 const productRoutes = require("./routes/ProductRoutes");
-// const stockRoutes = require("./routes/StockRoutes");
+const stockRoutes = require("./routes/StockRoutes");
+const locationRoutes = require("./routes/LocationRoutes");
+const reportRouter = require("./routes/ReportRoutes");
 
 dotenv.config();
 require("./config/db").connectToDb();
@@ -42,7 +44,9 @@ app.use(
 // Application routes
 app.use("/api/auth", authRoutes);
 app.use("/api/product", productRoutes);
-// app.use("/api/stock", stockRoutes);
+app.use("/api/stock", stockRoutes);
+app.use("/api/location", locationRoutes);
+app.use("/api/report", reportRouter);
 
 app.listen(PORT, () => {
   console.log(

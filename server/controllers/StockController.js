@@ -1,125 +1,171 @@
 const Stock = require("../models/Stock");
-const User = require("../models/User");
 const Product = require("../models/Product");
+const Location = require("../models/Location");
 
 const createStock = async (req, res) => {
-  const { product_name, location } = req.body;
+  const { location, products } = req.body;
 
   try {
-    if (!product_name || !location) {
+    if (!location || !Array.isArray(products) || products.length === 0) {
       return res
         .status(400)
-        .json({ message: "Full Stock information required." });
+        .json({ message: "Location and products are required." });
     }
-    const product = await Product.findOne({ product_name });
-    if (!product) {
-      return res.status(404).json({ message: "Product not found." });
-    }
-    const userIdFromSession = req.session.user ? req.session.user.userId : null;
 
-    if (!userIdFromSession) {
-      return res.status(401).json({ message: "User not authenticated." });
+    // Validate location exists
+    const locationExists = await Location.findById(location);
+    if (!locationExists) {
+      return res.status(404).json({ message: "Location not found." });
+    }
+
+    // Validate all products exist and quantities are valid
+    for (const item of products) {
+      if (
+        !item.product ||
+        typeof item.quantity !== "number" ||
+        item.quantity < 0
+      ) {
+        return res
+          .status(400)
+          .json({
+            message:
+              "Each product must have a valid product ID and non-negative quantity.",
+          });
+      }
+      const productExists = await Product.findById(item.product);
+      if (!productExists) {
+        return res
+          .status(404)
+          .json({ message: `Product not found: ${item.product}` });
+      }
     }
 
     const newStock = new Stock({
-      user_id: userIdFromSession,
-      product_id: product._id,
-      location: location,
+      location,
+      products,
     });
 
     await newStock.save();
-    res.status(200).json({ message: "Stock saved successfully." });
+    res
+      .status(201)
+      .json({ message: "Stock created successfully.", stock: newStock });
   } catch (error) {
-    console.error("Stock creation error: ", error);
-    res.status(500).json({ message: "Failed to add stock." });
+    console.error("Stock creation error:", error);
+    res.status(500).json({ message: "Failed to create stock." });
   }
 };
 
 const getAllStocks = async (req, res) => {
   try {
-    const allStocks = await Stock.find();
-    res
-      .status(200)
-      .json({ message: "These are all the stocks.", stocks: allStocks });
+    const stocks = await Stock.find()
+      .populate("location")
+      .populate("products.product");
+    res.status(200).json({ message: "All stocks retrieved.", stocks });
   } catch (error) {
-    console.error("Failed to retrieve", error);
-    res.status(500).json({ message: "Failed to retrieve the stocks" });
+    console.error("Failed to retrieve stocks:", error);
+    res.status(500).json({ message: "Failed to retrieve stocks." });
   }
 };
 
 const getStockById = async (req, res) => {
   const { id } = req.params;
-
   try {
-    const stock = await Stock.findById({ _id: id });
+    const stock = await Stock.findById(id)
+      .populate("location")
+      .populate("products.product");
     if (!stock) {
-      console.log("stock not found");
-      return res.status(404).json({ message: "stock not found." });
+      return res.status(404).json({ message: "Stock not found." });
     }
-    res.status(200).json({ message: "stock saved successfully", data: stock });
+    res.status(200).json({ message: "Stock retrieved successfully.", stock });
   } catch (error) {
-    console.error("Failed to retrieve stock.", error);
+    console.error("Failed to retrieve stock:", error);
     res.status(500).json({ message: "Failed to retrieve stock." });
   }
 };
 
 const updateStockById = async (req, res) => {
   const { id } = req.params;
-  const { product_name, location } = req.body;
+  const { location, products } = req.body;
 
   try {
-    const existingProduct = await Product.findOne({
-      product_name: product_name,
-    });
-    if (!existingProduct) {
-      console.log("Product not found");
-      return res.status(404).json({ message: "Product not found." });
+    // Validate location if provided
+    if (location) {
+      const locationExists = await Location.findById(location);
+      if (!locationExists) {
+        return res.status(404).json({ message: "Location not found." });
+      }
     }
 
-    const user_id = (await req.session.user) ? req.session.user.userId : null;
-    if (!user_id) {
-      return res.status(401).json({ message: "User not authenticated." });
+    // Validate products if provided
+    if (products) {
+      if (!Array.isArray(products) || products.length === 0) {
+        return res
+          .status(400)
+          .json({ message: "Products must be a non-empty array." });
+      }
+      for (const item of products) {
+        if (
+          !item.product ||
+          typeof item.quantity !== "number" ||
+          item.quantity < 0
+        ) {
+          return res
+            .status(400)
+            .json({
+              message:
+                "Each product must have a valid product ID and non-negative quantity.",
+            });
+        }
+        const productExists = await Product.findById(item.product);
+        if (!productExists) {
+          return res
+            .status(404)
+            .json({ message: `Product not found: ${item.product}` });
+        }
+      }
     }
-    const updatedStock = await Stock.findByIdAndUpdate(
-      { _id: id },
-      {
-        user_id: user_id,
-        product_id: [existingProduct._id],
-        location: location,
-      },
-      { new: true }
-    );
-    res.status(200).json({
-      message: "Stock updated successfully.",
-      new_stock: updatedStock,
-    });
+
+    const updateData = {};
+    if (location) updateData.location = location;
+    if (products) updateData.products = products;
+
+    const updatedStock = await Stock.findByIdAndUpdate(id, updateData, {
+      new: true,
+    })
+      .populate("location")
+      .populate("products.product");
+
+    if (!updatedStock) {
+      return res.status(404).json({ message: "Stock not found." });
+    }
+
+    res
+      .status(200)
+      .json({ message: "Stock updated successfully.", stock: updatedStock });
   } catch (error) {
-    console.error("Internal server error", error);
-    res.status(500).json({ message: "Failed to update." });
+    console.error("Failed to update stock:", error);
+    res.status(500).json({ message: "Failed to update stock." });
   }
 };
 
-// const deleteProductById = async (req, res) => {
-//   const { id } = req.params;
-
-//   try {
-//     const existingProduct = await Product.findById({ _id: id });
-//     if (!existingProduct) {
-//       console.log("Product not found");
-//       return res.status(404).json({ message: "Product not found." });
-//     }
-//     await Product.findByIdAndDelete({ _id: id });
-//     res.status(200).json({ message: "Product deleted successfully." });
-//   } catch (error) {
-//     console.error("Failed to delete product", error);
-//     return res.status(500).json({ message: "Failed to delete product." });
-//   }
-// };
+const deleteStockById = async (req, res) => {
+  const { id } = req.params;
+  try {
+    const deletedStock = await Stock.findByIdAndDelete(id);
+    if (!deletedStock) {
+      return res.status(404).json({ message: "Stock not found." });
+    }
+    res.status(200).json({ message: "Stock deleted successfully." });
+  } catch (error) {
+    console.error("Failed to delete stock:", error);
+    res.status(500).json({ message: "Failed to delete stock." });
+  }
+};
 
 module.exports = {
   createStock,
   getAllStocks,
   getStockById,
   updateStockById,
-  //   deleteProductById,
+  deleteStockById,
 };

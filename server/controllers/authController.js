@@ -40,7 +40,7 @@ const loginUser = async (req, res) => {
     if (!email || !password) {
       return res
         .status(400)
-        .json({ message: "Username and password are required." });
+        .json({ message: "Email and password are required." });
     }
 
     const existingUser = await User.findOne({ email });

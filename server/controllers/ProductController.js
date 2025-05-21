@@ -4,7 +4,7 @@ const insertProduct = async (req, res) => {
   const { product_name, sku, description, unit_price } = req.body;
 
   try {
-    if (!product_name || !sku || description || !unit_price) {
+    if (!product_name || !sku || !unit_price) {
       return res
         .status(400)
         .json({ message: "Full Product information required." });
@@ -12,7 +12,7 @@ const insertProduct = async (req, res) => {
 
     const existingSku = await Product.find({ sku: sku });
 
-    if (existingSku) {
+    if (existingSku.length > 0) {
       return res
         .status(403)
         .json({ message: "The product sku already exists." });
@@ -65,7 +65,7 @@ const getProductById = async (req, res) => {
 
 const updateProduct = async (req, res) => {
   const { id } = req.params;
-  const { product_name, quantity, unit_price } = req.body;
+  const { product_name, sku, description, unit_price } = req.body;
 
   try {
     const existingProduct = await Product.findById({ _id: id });
@@ -73,19 +73,29 @@ const updateProduct = async (req, res) => {
       console.log("Product not found");
       return res.status(404).json({ message: "Product not found." });
     }
-    const updatedProduct = await Product.findByIdAndUpdate(
-      { _id: id },
-      {
-        product_name: product_name,
-        quantity: quantity,
-        unit_price: unit_price,
-      },
-      { new: true }
-    );
-    res.status(200).json({
-      message: "Product updated successfully.",
-      new_product: updatedProduct,
-    });
+
+    const existingSku = await Product.find({ sku: sku });
+
+    if (existingSku.length > 0) {
+      return res
+        .status(403)
+        .json({ message: "The product sku already exists." });
+    } else {
+      const updatedProduct = await Product.findByIdAndUpdate(
+        { _id: id },
+        {
+          product_name: product_name,
+          sku: sku,
+          description: description,
+          unit_price: unit_price,
+        },
+        { new: true }
+      );
+      res.status(200).json({
+        message: "Product updated successfully.",
+        new_product: updatedProduct,
+      });
+    }
   } catch (error) {
     console.error("Internal server error", error);
     res.status(500).json({ message: "Failed to update." });
